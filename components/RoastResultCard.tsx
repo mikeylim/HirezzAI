@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Download,
+  ExternalLink,
   FileText,
   RefreshCw,
   Share2,
@@ -22,6 +23,7 @@ import { RatingBreakdown } from "./RatingBreakdown";
 import { KeywordChips } from "./KeywordChips";
 import { ImprovedResume } from "./ImprovedResume";
 import type { RoastRequest, RoastResult } from "@/types";
+import { downloadDocx, openPdfPreviewTab } from "@/lib/generateResumeDocs";
 
 const PRIORITY_TONE: Record<string, string> = {
   high: "bg-rose-600 text-white",
@@ -127,6 +129,7 @@ export function RoastResultCard({
   const [letter, setLetter] = useState(result.rizzLetter ?? "");
   const [letterLoading, setLetterLoading] = useState(false);
   const [letterError, setLetterError] = useState<string | null>(null);
+  const [isMagicWorking, setIsMagicWorking] = useState(false);
   const [activeMemeIndex, setActiveMemeIndex] = useState(0);
   const [auraMemeIndex, setAuraMemeIndex] = useState(0);
   const [showMemeDrop, setShowMemeDrop] = useState(Boolean(result.memes.length));
@@ -259,6 +262,27 @@ export function RoastResultCard({
       setSpeechError("ElevenLabs was unavailable, using browser voice fallback.");
       playBrowserBrainrotVoice();
     }
+  };
+
+  const handleMagicDocx = async () => {
+    setIsMagicWorking(true);
+    try {
+      await downloadDocx(
+        inputContext?.resume ?? "",
+        result,
+        inputContext?.jobTitle,
+      );
+    } finally {
+      setIsMagicWorking(false);
+    }
+  };
+
+  const handleMagicPdf = () => {
+    openPdfPreviewTab(
+      inputContext?.resume ?? "",
+      result,
+      inputContext?.jobTitle,
+    );
   };
 
   const generateLetter = async () => {
@@ -700,32 +724,69 @@ export function RoastResultCard({
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <CardTitle>Improved Resume</CardTitle>
-              <CardDescription>
-                One-click glow up text you can copy or download.
-              </CardDescription>
+          <div className="flex flex-col gap-4">
+            {/* Title row */}
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>Improved Resume</CardTitle>
+                <CardDescription>
+                  AI-improved summary + bullet rewrites. Export as PDF or DOCX.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={downloadTxt}
+              >
+                <Download className="h-4 w-4" />
+                TXT
+              </Button>
             </div>
-            <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={downloadTxt}
-            >
-              <Download className="h-4 w-4" />
-              TXT
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copy("resume", reportText)}
-            >
-              {copiedKey === "resume" ? <Check className="h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
-              Magic fix
-            </Button>
+
+            {/* Magic Fix banner */}
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <Wand2 className="h-4 w-4 text-primary" />
+                    Magic Fix
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Applies {result.bulletGlowUp.length} bullet rewrite
+                    {result.bulletGlowUp.length !== 1 ? "s" : ""} + improved
+                    summary into one polished document. Downloads immediately.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {/* PDF — opens in new tab with print button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMagicPdf}
+                    className="gap-1.5"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open PDF
+                  </Button>
+                  {/* DOCX — downloads directly */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleMagicDocx}
+                    disabled={isMagicWorking}
+                    className="btn-cook gap-1.5"
+                  >
+                    {isMagicWorking ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    {isMagicWorking ? "Building…" : "Download DOCX"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>
