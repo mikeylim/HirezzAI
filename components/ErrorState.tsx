@@ -1,6 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
 
 export function ErrorState({
   message,
@@ -10,19 +9,29 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <Card className="border-destructive/50">
-      <CardContent className="flex flex-col items-start gap-3 py-6">
-        <div className="flex items-center gap-2 text-destructive">
+    <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 backdrop-blur-sm">
+      <div className="flex items-start gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
           <AlertTriangle className="h-5 w-5" />
-          <span className="font-semibold">Something went wrong</span>
         </div>
-        <p className="text-sm text-muted-foreground">{message}</p>
-        {onRetry && (
-          <Button onClick={onRetry} variant="outline" size="sm">
-            Try again
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="font-semibold text-red-400">Something went wrong</p>
+            <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+          </div>
+          {onRetry && (
+            <Button
+              onClick={onRetry}
+              size="sm"
+              variant="outline"
+              className="w-fit gap-2 border-red-500/30 text-red-400 hover:border-red-500/50 hover:bg-red-500/10"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Try again
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
