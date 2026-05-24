@@ -19,7 +19,7 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
-  title: "Cooked Resume",
+  title: "HirezzAI",
   description: "Find out how cooked your resume is — then un-cook it.",
 };
 

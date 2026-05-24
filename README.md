@@ -1,4 +1,4 @@
-# Cooked Resume
+# HirezzAI
 
 Paste a job description + your resume. Gemini analyzes the fit, BrainRot
 roasts it in internet language, and Imgflip slaps a meme on the diagnosis.

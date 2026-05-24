@@ -38,7 +38,7 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 function shareText(result: RoastResult): string {
-  return `Cooked Resume report: ${result.rizzScore}/100 Rizz Score, ${result.auraScore}/100 Aura Score. Verdict: ${result.level.toUpperCase()}. Missing drip: ${result.missingDrip.slice(0, 5).join(", ") || "none"}.`;
+  return `HirezzAI report: ${result.rizzScore}/100 Rizz Score, ${result.auraScore}/100 Aura Score. Verdict: ${result.level.toUpperCase()}. Missing drip: ${result.missingDrip.slice(0, 5).join(", ") || "none"}.`;
 }
 
 function verdictTitle(level: RoastResult["level"]): string {
@@ -146,7 +146,7 @@ export function RoastResultCard({
   const reportText = polishedResumeText(result);
   const shareCopy = shareText(result);
   const shareUrl =
-    typeof window !== "undefined" ? window.location.href : "https://cooked-resume.local";
+    typeof window !== "undefined" ? window.location.href : "https://hirezzai.vercel.app";
   const encodedShare = encodeURIComponent(`${shareCopy}\n${shareUrl}`);
   const topFix =
     result.glowUpPlan.find((item) => item.priority === "high") ??
@@ -185,7 +185,7 @@ export function RoastResultCard({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "cooked-resume-glow-up.txt";
+    link.download = "hirezzai-glow-up.txt";
     link.click();
     URL.revokeObjectURL(url);
   };

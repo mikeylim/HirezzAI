@@ -12,9 +12,8 @@ export function Header() {
           </div>
           <span className="text-lg font-bold tracking-tight">
             <span className="bg-gradient-to-r from-orange-400 via-red-500 to-purple-500 bg-clip-text text-transparent">
-              Cooked
+              HirezzAI
             </span>
-            <span className="text-foreground"> Resume</span>
           </span>
         </div>
 
