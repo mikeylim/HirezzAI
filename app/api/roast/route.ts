@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import type { RoastRequest, RoastResult } from "@/types";
+import type { RoastRequest, RoastResult, Tone } from "@/types";
 import { analyzeResume } from "@/lib/geminiApi";
 import { toBrainrot } from "@/lib/brainrotApi";
-import { makeMeme } from "@/lib/imgflipApi";
-import { calculateCookedScore } from "@/lib/calculateCookedScore";
+import { makeMemeCarousel } from "@/lib/imgflipApi";
+import { calculateLevel } from "@/lib/calculateCookedScore";
 
 export const runtime = "nodejs";
+
+const VALID_TONES: Tone[] = ["savage", "balanced", "gentle"];
 
 function validate(body: unknown): RoastRequest | null {
   if (!body || typeof body !== "object") return null;
@@ -13,10 +15,15 @@ function validate(body: unknown): RoastRequest | null {
   if (typeof b.jobTitle !== "string" || !b.jobTitle.trim()) return null;
   if (typeof b.jobDescription !== "string" || !b.jobDescription.trim()) return null;
   if (typeof b.resume !== "string" || !b.resume.trim()) return null;
+  const tone: Tone =
+    typeof b.tone === "string" && VALID_TONES.includes(b.tone as Tone)
+      ? (b.tone as Tone)
+      : "balanced";
   return {
     jobTitle: b.jobTitle.trim(),
     jobDescription: b.jobDescription.trim(),
     resume: b.resume.trim(),
+    tone,
   };
 }
 
@@ -38,30 +45,32 @@ export async function POST(request: Request) {
 
   try {
     const { analysis, usedFallback: geminiFallback } = await analyzeResume(input);
-    const { score, level } = calculateCookedScore(analysis);
+    const level = calculateLevel(analysis);
 
     const { text: brainrotDiagnosis, usedFallback: brainrotFallback } =
       await toBrainrot(analysis.seriousDiagnosis);
 
-    const {
-      memeUrl,
-      caption,
-      usedFallback: imgflipFallback,
-    } = await makeMeme({ level, brainrotDiagnosis });
+    const { memes, usedFallback: imgflipFallback } = await makeMemeCarousel({
+      level,
+      captions: analysis.memeCaptions,
+    });
 
     const result: RoastResult = {
-      cookedScore: score,
+      rizzScore: analysis.rizzScore,
+      auraScore: analysis.auraScore,
       level,
-      ratings: analysis.ratings,
-      missingKeywords: analysis.missingKeywords,
-      seriousDiagnosis: analysis.seriousDiagnosis,
+      rizzBreakdown: analysis.rizzBreakdown,
+      missingDrip: analysis.missingDrip,
+      ickDetector: analysis.ickDetector,
+      recruiterPOV: analysis.recruiterPOV,
       brainrotDiagnosis,
-      actualAdvice: analysis.actualAdvice,
+      seriousDiagnosis: analysis.seriousDiagnosis,
+      glowUpPlan: analysis.glowUpPlan,
+      bulletGlowUp: analysis.bulletGlowUp,
       improvedSummary: analysis.improvedSummary,
-      improvedBullets: analysis.improvedBullets,
+      quantifiedBulletCount: analysis.quantifiedBulletCount,
       readyToApply: analysis.readyToApply,
-      memeUrl,
-      memeCaption: caption,
+      memes,
       usedFallbacks: {
         gemini: geminiFallback,
         brainrot: brainrotFallback,

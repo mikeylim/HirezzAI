@@ -1,69 +1,74 @@
 import "server-only";
-import type { CookedLevel } from "@/types";
-import { selectMemeTemplate } from "./selectMemeTemplate";
+import type { CookedLevel, Meme } from "@/types";
+import { selectMemeTemplates } from "./selectMemeTemplate";
 
-function deriveCaption(
-  level: CookedLevel,
-  brainrotDiagnosis: string,
-): { top: string; bottom: string } {
-  const trimmed = brainrotDiagnosis.replace(/\s+/g, " ").trim();
-  const firstSentence = trimmed.split(/[.!?]/)[0] || trimmed;
-  const short = firstSentence.length > 60 ? `${firstSentence.slice(0, 57)}…` : firstSentence;
-
-  if (level === "locked-in") {
-    return { top: "RESUME: LOCKED IN", bottom: short.toUpperCase() };
-  }
-  if (level === "mid") {
-    return { top: "RESUME: MID", bottom: short.toUpperCase() };
-  }
-  return { top: "RESUME: COOKED", bottom: short.toUpperCase() };
-}
-
-export async function makeMeme({
+export async function makeMemeCarousel({
   level,
-  brainrotDiagnosis,
+  captions,
 }: {
   level: CookedLevel;
-  brainrotDiagnosis: string;
-}): Promise<{
-  memeUrl: string;
-  caption: { top: string; bottom: string };
-  usedFallback: boolean;
-}> {
-  const template = selectMemeTemplate(level);
-  const caption = deriveCaption(level, brainrotDiagnosis);
+  captions: Array<{ top: string; bottom: string }>;
+}): Promise<{ memes: Meme[]; usedFallback: boolean }> {
+  const templates = selectMemeTemplates(level);
   const username = process.env.IMGFLIP_USERNAME;
   const password = process.env.IMGFLIP_PASSWORD;
 
+  const paired = templates.map((tpl, i) => ({
+    template: tpl,
+    caption: captions[i] ?? captions[0] ?? { top: "", bottom: "" },
+  }));
+
   if (process.env.USE_MOCKS === "1" || !username || !password) {
-    return { memeUrl: template.fallbackImageUrl, caption, usedFallback: true };
+    return {
+      memes: paired.map(({ template, caption }) => ({
+        templateId: template.id,
+        imageUrl: template.fallbackImageUrl,
+        topText: caption.top,
+        bottomText: caption.bottom,
+      })),
+      usedFallback: true,
+    };
   }
 
-  try {
-    const params = new URLSearchParams({
-      template_id: template.id,
-      username,
-      password,
-      text0: caption.top,
-      text1: caption.bottom,
-    });
+  let anyFailed = false;
+  const memes = await Promise.all(
+    paired.map(async ({ template, caption }): Promise<Meme> => {
+      try {
+        const params = new URLSearchParams({
+          template_id: template.id,
+          username,
+          password,
+          text0: caption.top,
+          text1: caption.bottom,
+        });
+        const res = await fetch("https://api.imgflip.com/caption_image", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+        if (!res.ok) throw new Error(`Imgflip HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data?.success || !data?.data?.url) {
+          throw new Error(`Imgflip error: ${data?.error_message || "unknown"}`);
+        }
+        return {
+          templateId: template.id,
+          imageUrl: data.data.url,
+          topText: caption.top,
+          bottomText: caption.bottom,
+        };
+      } catch (err) {
+        console.error("[imgflipApi] template fallback:", err);
+        anyFailed = true;
+        return {
+          templateId: template.id,
+          imageUrl: template.fallbackImageUrl,
+          topText: caption.top,
+          bottomText: caption.bottom,
+        };
+      }
+    }),
+  );
 
-    const res = await fetch("https://api.imgflip.com/caption_image", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-    });
-
-    if (!res.ok) throw new Error(`Imgflip HTTP ${res.status}`);
-
-    const data = await res.json();
-    if (!data?.success || !data?.data?.url) {
-      throw new Error(`Imgflip error: ${data?.error_message || "unknown"}`);
-    }
-
-    return { memeUrl: data.data.url, caption, usedFallback: false };
-  } catch (err) {
-    console.error("[imgflipApi] falling back to static template:", err);
-    return { memeUrl: template.fallbackImageUrl, caption, usedFallback: true };
-  }
+  return { memes, usedFallback: anyFailed };
 }

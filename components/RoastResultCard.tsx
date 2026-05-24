@@ -7,11 +7,19 @@ import { KeywordChips } from "./KeywordChips";
 import { ImprovedResume } from "./ImprovedResume";
 import type { RoastResult } from "@/types";
 
+const PRIORITY_TONE: Record<string, string> = {
+  high: "bg-rose-600 text-white",
+  medium: "bg-amber-500 text-white",
+  "quick-win": "bg-emerald-500 text-white",
+};
+
 export function RoastResultCard({ result }: { result: RoastResult }) {
   const usingAnyFallback =
     result.usedFallbacks.gemini ||
     result.usedFallbacks.brainrot ||
     result.usedFallbacks.imgflip;
+  const firstMeme = result.memes[0];
+  const bulletPreviews = result.bulletGlowUp.map((b) => b.variants[0] ?? b.original);
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,33 +34,48 @@ export function RoastResultCard({ result }: { result: RoastResult }) {
             )}
           </div>
           <CardDescription>
-            How your application stacks up against the job.
+            Rizz Score (ATS-style fit) and Aura Score (overall vibe).
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <CookedScore score={result.cookedScore} level={result.level} />
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Rizz Score
+              </p>
+              <CookedScore score={result.rizzScore} level={result.level} />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Aura Score
+              </p>
+              <CookedScore score={result.auraScore} level={result.level} />
+            </div>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
-              <div className="relative aspect-square w-full">
-                <Image
-                  src={result.memeUrl}
-                  alt="Application status meme"
-                  fill
-                  unoptimized
-                  className="object-contain"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+            {firstMeme && (
+              <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+                <div className="relative aspect-square w-full">
+                  <Image
+                    src={firstMeme.imageUrl}
+                    alt="Application status meme"
+                    fill
+                    unoptimized
+                    className="object-contain"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
+                <div className="border-t border-border bg-background/60 p-3 text-xs text-muted-foreground">
+                  <p className="font-mono">
+                    <span className="font-bold">TOP:</span> {firstMeme.topText}
+                  </p>
+                  <p className="font-mono">
+                    <span className="font-bold">BOTTOM:</span> {firstMeme.bottomText}
+                  </p>
+                </div>
               </div>
-              <div className="border-t border-border bg-background/60 p-3 text-xs text-muted-foreground">
-                <p className="font-mono">
-                  <span className="font-bold">TOP:</span> {result.memeCaption.top}
-                </p>
-                <p className="font-mono">
-                  <span className="font-bold">BOTTOM:</span> {result.memeCaption.bottom}
-                </p>
-              </div>
-            </div>
+            )}
 
             <div className="flex flex-col gap-4">
               <div>
@@ -71,6 +94,14 @@ export function RoastResultCard({ result }: { result: RoastResult }) {
                   {result.seriousDiagnosis}
                 </p>
               </div>
+              <div>
+                <h4 className="mb-1 text-sm font-semibold text-muted-foreground">
+                  Recruiter POV
+                </h4>
+                <p className="rounded-md border border-border bg-muted/50 p-3 text-sm leading-relaxed">
+                  {result.recruiterPOV}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -78,38 +109,38 @@ export function RoastResultCard({ result }: { result: RoastResult }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Rating breakdown</CardTitle>
+          <CardTitle>Rizz Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <RatingBreakdown ratings={result.ratings} />
+          <RatingBreakdown breakdown={result.rizzBreakdown} />
         </CardContent>
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Missing keywords</CardTitle>
-            <CardDescription>From the JD, not in your resume.</CardDescription>
+            <CardTitle>Missing Drip</CardTitle>
+            <CardDescription>Keywords from the JD not in your resume.</CardDescription>
           </CardHeader>
           <CardContent>
-            <KeywordChips keywords={result.missingKeywords} />
+            <KeywordChips keywords={result.missingDrip} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Actual advice</CardTitle>
-            <CardDescription>What to fix, in plain English.</CardDescription>
+            <CardTitle>Ick Detector</CardTitle>
+            <CardDescription>Red flags a recruiter will catch.</CardDescription>
           </CardHeader>
           <CardContent>
-            {result.actualAdvice?.length ? (
+            {result.ickDetector.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No icks — you&apos;re clean.</p>
+            ) : (
               <ul className="ml-5 list-disc space-y-2 text-sm">
-                {result.actualAdvice.map((a, i) => (
-                  <li key={i}>{a}</li>
+                {result.ickDetector.map((ick, i) => (
+                  <li key={i}>{ick}</li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No advice — you&apos;re solid.</p>
             )}
           </CardContent>
         </Card>
@@ -117,15 +148,41 @@ export function RoastResultCard({ result }: { result: RoastResult }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Improved resume</CardTitle>
+          <CardTitle>The Glow Up Plan</CardTitle>
+          <CardDescription>What to fix, ordered by priority.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {result.glowUpPlan.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No advice — you&apos;re solid.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {result.glowUpPlan.map((g, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3"
+                >
+                  <Badge className={PRIORITY_TONE[g.priority] ?? ""}>
+                    {g.priority}
+                  </Badge>
+                  <span className="text-sm leading-relaxed">{g.advice}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Improved Resume</CardTitle>
           <CardDescription>
-            A rewritten summary and bullets tailored to this job.
+            Rewritten summary plus your strongest bullet variants.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ImprovedResume
             summary={result.improvedSummary}
-            bullets={result.improvedBullets}
+            bullets={bulletPreviews}
           />
         </CardContent>
       </Card>

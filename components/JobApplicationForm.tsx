@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { sampleInputs } from "@/data/sampleInputs";
+import type { Tone } from "@/types";
 
 export type JobApplicationFormValues = {
   jobTitle: string;
   jobDescription: string;
   resume: string;
+  tone: Tone;
 };
 
 export function JobApplicationForm({
@@ -24,11 +26,12 @@ export function JobApplicationForm({
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [resume, setResume] = useState("");
+  const [tone] = useState<Tone>("balanced");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle.trim() || !jobDescription.trim() || !resume.trim()) return;
-    onSubmit({ jobTitle, jobDescription, resume });
+    onSubmit({ jobTitle, jobDescription, resume, tone });
   };
 
   const fillExample = () => {

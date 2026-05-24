@@ -2,46 +2,95 @@ import "server-only";
 import type { GeminiAnalysis, RoastRequest } from "@/types";
 import { mockRoastResult } from "@/data/mockRoastResult";
 
-const SYSTEM_PROMPT = `You are a strict but constructive career coach.
+function toneInstruction(tone: RoastRequest["tone"]): string {
+  switch (tone) {
+    case "savage":
+      return "Tone: brutally honest, sharp, no sugar-coating. Roast where it hurts but stay constructive.";
+    case "gentle":
+      return "Tone: supportive and encouraging. Frame weaknesses as growth areas.";
+    default:
+      return "Tone: honest and professional. Direct but not harsh.";
+  }
+}
 
-You will receive a job title, a job description, and a candidate's resume.
-Analyze how well the resume fits the job and return ONLY JSON matching this TypeScript type:
+function buildSystemPrompt(tone: RoastRequest["tone"]): string {
+  return `You are a strict but fair career coach scoring resumes against job descriptions.
+
+${toneInstruction(tone)}
+
+Return ONLY JSON matching this TypeScript type. No markdown, no commentary.
 
 type GeminiAnalysis = {
-  overallScore: number;            // 0-100, how strong the resume is for THIS job
-  ratings: Array<{                  // 3-5 dimensions
-    label: string;                  // e.g. "Keyword Match", "Impact", "Clarity", "Relevance"
-    score: number;                  // 0-100
-    comment: string;                // one short sentence
-  }>;
-  missingKeywords: string[];        // keywords/skills from JD missing in resume
-  seriousDiagnosis: string;         // 2-4 sentence honest assessment, professional tone
-  actualAdvice: string[];           // 3-5 concrete, actionable suggestions
-  improvedSummary: string;          // a rewritten resume summary tailored to the job
-  improvedBullets: string[];        // 3-5 rewritten experience bullets (action + metric + result)
-  readyToApply: boolean;            // true only if overallScore >= 75
+  rizzScore: number;              // 0-100, ATS-style keyword + structure match
+  auraScore: number;              // 0-100, overall vibe / quality of writing
+  rizzBreakdown: {
+    keywordMatch: number;         // 0-100
+    quantifiedBullets: number;    // 0-100 (how many bullets have numbers)
+    sectionStructure: number;     // 0-100 (Experience/Education/Skills present)
+    actionVerbs: number;          // 0-100 (bullets start with strong verbs)
+    titleAlignment: number;       // 0-100 (resume titles match JD title)
+  };
+  missingDrip: string[];          // JD keywords NOT in resume
+  ickDetector: string[];          // 3-5 specific red flags
+  recruiterPOV: string;           // 2-3 sentences: what a recruiter thinks in 7 seconds
+  seriousDiagnosis: string;       // 2-4 sentence honest assessment
+  glowUpPlan: Array<{ advice: string; priority: "high" | "medium" | "quick-win" }>;
+  bulletGlowUp: Array<{ original: string; variants: string[] /* exactly 3 */ }>;
+  improvedSummary: string;
+  quantifiedBulletCount: { before: number; after: number };
+  readyToApply: boolean;          // true only if rizzScore >= 75
+  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS
 };
 
 Rules:
-- Be honest. If the resume is weak, score it low.
-- improvedSummary and improvedBullets must be realistic — never fabricate jobs or metrics the candidate didn't mention. Rewrite what they have more effectively.
-- Return JSON only. No markdown fences. No commentary.`;
+- Never fabricate jobs, metrics, or skills the candidate didn't mention. Rewrite what they have.
+- bulletGlowUp.variants must contain exactly 3 alternatives per original bullet.
+- memeCaptions must contain exactly 3 entries (one per meme slot).
+- Return JSON only.`;
+}
 
-function buildUserPrompt({ jobTitle, jobDescription, resume }: RoastRequest): string {
+function buildUserPrompt({
+  jobTitle,
+  jobDescription,
+  resume,
+}: RoastRequest): string {
   return `JOB TITLE:\n${jobTitle}\n\nJOB DESCRIPTION:\n${jobDescription}\n\nRESUME:\n${resume}`;
 }
 
 function mockAnalysis(): GeminiAnalysis {
   return {
-    overallScore: mockRoastResult.cookedScore,
-    ratings: mockRoastResult.ratings,
-    missingKeywords: mockRoastResult.missingKeywords,
+    rizzScore: mockRoastResult.rizzScore,
+    auraScore: mockRoastResult.auraScore,
+    rizzBreakdown: mockRoastResult.rizzBreakdown,
+    missingDrip: mockRoastResult.missingDrip,
+    ickDetector: mockRoastResult.ickDetector,
+    recruiterPOV: mockRoastResult.recruiterPOV,
     seriousDiagnosis: mockRoastResult.seriousDiagnosis,
-    actualAdvice: mockRoastResult.actualAdvice,
+    glowUpPlan: mockRoastResult.glowUpPlan,
+    bulletGlowUp: mockRoastResult.bulletGlowUp,
     improvedSummary: mockRoastResult.improvedSummary,
-    improvedBullets: mockRoastResult.improvedBullets,
+    quantifiedBulletCount: mockRoastResult.quantifiedBulletCount,
     readyToApply: mockRoastResult.readyToApply,
+    memeCaptions: mockRoastResult.memes.map((m) => ({
+      top: m.topText,
+      bottom: m.bottomText,
+    })),
   };
+}
+
+function isValidAnalysis(x: unknown): x is GeminiAnalysis {
+  if (!x || typeof x !== "object") return false;
+  const a = x as Record<string, unknown>;
+  return (
+    typeof a.rizzScore === "number" &&
+    typeof a.auraScore === "number" &&
+    Array.isArray(a.missingDrip) &&
+    Array.isArray(a.ickDetector) &&
+    typeof a.recruiterPOV === "string" &&
+    Array.isArray(a.glowUpPlan) &&
+    Array.isArray(a.bulletGlowUp) &&
+    Array.isArray(a.memeCaptions)
+  );
 }
 
 export async function analyzeResume(
@@ -57,7 +106,10 @@ export async function analyzeResume(
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const body = {
-      systemInstruction: { role: "system", parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: {
+        role: "system",
+        parts: [{ text: buildSystemPrompt(req.tone) }],
+      },
       contents: [{ role: "user", parts: [{ text: buildUserPrompt(req) }] }],
       generationConfig: {
         responseMimeType: "application/json",
@@ -70,7 +122,6 @@ export async function analyzeResume(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-
     if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
 
     const data = await res.json();
@@ -78,10 +129,8 @@ export async function analyzeResume(
       data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new Error("Gemini returned no text");
 
-    const parsed = JSON.parse(text) as GeminiAnalysis;
-    if (typeof parsed.overallScore !== "number" || !Array.isArray(parsed.ratings)) {
-      throw new Error("Gemini JSON shape invalid");
-    }
+    const parsed = JSON.parse(text);
+    if (!isValidAnalysis(parsed)) throw new Error("Gemini JSON shape invalid");
 
     return { analysis: parsed, usedFallback: false };
   } catch (err) {
