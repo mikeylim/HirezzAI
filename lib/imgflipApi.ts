@@ -13,11 +13,13 @@ function cleanCaption(text: string): string {
 export async function makeMemeCarousel({
   level,
   captions,
+  signalText,
 }: {
   level: CookedLevel;
   captions: Array<{ top: string; bottom: string }>;
+  signalText: string;
 }): Promise<{ memes: Meme[]; usedFallback: boolean }> {
-  const templates = selectMemeTemplates(level);
+  const templates = selectMemeTemplates({ level, signalText });
   const username = process.env.IMGFLIP_USERNAME;
   const password = process.env.IMGFLIP_PASSWORD;
 

@@ -20,10 +20,9 @@ ${toneInstruction(tone)}
 
 Return ONLY JSON matching this TypeScript type. No markdown, no commentary.
 
-Meme template order by likely result level:
-- locked-in: Drake Hotline Bling, Running Away Balloon, Waiting Skeleton
-- mid: Distracted Boyfriend, Two Buttons, Change My Mind
-- cooked: This Is Fine, First World Problems, Bad Luck Brian
+The app will choose named Imgflip templates after your analysis by matching the
+diagnosis, red flags, missing keywords, and your captions against a meme catalog.
+Write captions that are specific enough to guide that choice.
 
 type GeminiAnalysis = {
   rizzScore: number;              // 0-100, ATS-style keyword + structure match
@@ -44,14 +43,14 @@ type GeminiAnalysis = {
   improvedSummary: string;
   quantifiedBulletCount: { before: number; after: number };
   readyToApply: boolean;          // true only if rizzScore >= 75
-  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS, matched to the chosen level's template order
+  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS
 };
 
 Rules:
 - Never fabricate jobs, metrics, or skills the candidate didn't mention. Rewrite what they have.
 - bulletGlowUp.variants must contain exactly 3 alternatives per original bullet.
-- memeCaptions must contain exactly 3 entries for the likely result level based on your scores.
-- Caption slot 1 must fit the first template listed for that level, slot 2 the second template, slot 3 the third template.
+- memeCaptions must contain exactly 3 entries.
+- Captions should clearly reference the main gap pattern: missing keywords, no metrics, generic summary, vague bullets, strong fit, or ready-to-apply energy.
 - Captions should be specific to the JD/resume gap but must not expose private resume details.
 - Keep meme caption lines short: max 70 characters per top/bottom line.
 - Return JSON only.`;

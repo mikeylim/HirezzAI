@@ -53,6 +53,14 @@ export async function POST(request: Request) {
     const { memes, usedFallback: imgflipFallback } = await makeMemeCarousel({
       level,
       captions: analysis.memeCaptions,
+      signalText: [
+        input.jobTitle,
+        analysis.seriousDiagnosis,
+        analysis.recruiterPOV,
+        ...analysis.missingDrip,
+        ...analysis.ickDetector,
+        ...analysis.memeCaptions.flatMap((caption) => [caption.top, caption.bottom]),
+      ].join(" "),
     });
 
     const result: RoastResult = {
