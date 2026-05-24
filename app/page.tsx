@@ -62,7 +62,9 @@ export default function HomePage() {
               onRetry={lastInput ? () => runRoast(lastInput) : undefined}
             />
           )}
-          {result && !isLoading && !error && <RoastResultCard result={result} />}
+          {result && !isLoading && !error && (
+            <RoastResultCard result={result} inputContext={lastInput ?? undefined} />
+          )}
         </div>
       </main>
       <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">

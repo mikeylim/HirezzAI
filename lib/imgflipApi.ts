@@ -2,6 +2,14 @@ import "server-only";
 import type { CookedLevel, Meme } from "@/types";
 import { selectMemeTemplates } from "./selectMemeTemplate";
 
+function cleanCaption(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90)
+    .toUpperCase();
+}
+
 export async function makeMemeCarousel({
   level,
   captions,
@@ -22,9 +30,10 @@ export async function makeMemeCarousel({
     return {
       memes: paired.map(({ template, caption }) => ({
         templateId: template.id,
+        templateName: template.name,
         imageUrl: template.fallbackImageUrl,
-        topText: caption.top,
-        bottomText: caption.bottom,
+        topText: cleanCaption(caption.top),
+        bottomText: cleanCaption(caption.bottom),
       })),
       usedFallback: true,
     };
@@ -38,8 +47,10 @@ export async function makeMemeCarousel({
           template_id: template.id,
           username,
           password,
-          text0: caption.top,
-          text1: caption.bottom,
+          text0: cleanCaption(caption.top),
+          text1: cleanCaption(caption.bottom),
+          font: "impact",
+          max_font_size: "42",
         });
         const res = await fetch("https://api.imgflip.com/caption_image", {
           method: "POST",
@@ -53,18 +64,20 @@ export async function makeMemeCarousel({
         }
         return {
           templateId: template.id,
+          templateName: template.name,
           imageUrl: data.data.url,
-          topText: caption.top,
-          bottomText: caption.bottom,
+          topText: cleanCaption(caption.top),
+          bottomText: cleanCaption(caption.bottom),
         };
       } catch (err) {
         console.error("[imgflipApi] template fallback:", err);
         anyFailed = true;
         return {
           templateId: template.id,
+          templateName: template.name,
           imageUrl: template.fallbackImageUrl,
-          topText: caption.top,
-          bottomText: caption.bottom,
+          topText: cleanCaption(caption.top),
+          bottomText: cleanCaption(caption.bottom),
         };
       }
     }),

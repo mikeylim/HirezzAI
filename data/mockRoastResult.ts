@@ -70,18 +70,21 @@ export const mockRoastResult: RoastResult = {
   memes: [
     {
       templateId: "112126428",
+      templateName: "Distracted Boyfriend",
       imageUrl: "https://i.imgflip.com/1ur9b0.jpg",
       topText: "RESUME SAYS 'TEAM PLAYER'",
       bottomText: "JD SAYS 'SHIP TYPESCRIPT'",
     },
     {
       templateId: "61544",
+      templateName: "This Is Fine",
       imageUrl: "https://i.imgflip.com/wxica.jpg",
       topText: "NO METRICS IN MY BULLETS",
       bottomText: "THIS IS FINE",
     },
     {
       templateId: "181913649",
+      templateName: "Drake Hotline Bling",
       imageUrl: "https://i.imgflip.com/30b1gx.jpg",
       topText: "PASTE GENERIC SUMMARY",
       bottomText: "PASTE GLOW UP PLAN",

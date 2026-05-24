@@ -20,6 +20,11 @@ ${toneInstruction(tone)}
 
 Return ONLY JSON matching this TypeScript type. No markdown, no commentary.
 
+Meme template order by likely result level:
+- locked-in: Drake Hotline Bling, Running Away Balloon, Waiting Skeleton
+- mid: Distracted Boyfriend, Two Buttons, Change My Mind
+- cooked: This Is Fine, First World Problems, Bad Luck Brian
+
 type GeminiAnalysis = {
   rizzScore: number;              // 0-100, ATS-style keyword + structure match
   auraScore: number;              // 0-100, overall vibe / quality of writing
@@ -39,13 +44,16 @@ type GeminiAnalysis = {
   improvedSummary: string;
   quantifiedBulletCount: { before: number; after: number };
   readyToApply: boolean;          // true only if rizzScore >= 75
-  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS
+  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS, matched to the chosen level's template order
 };
 
 Rules:
 - Never fabricate jobs, metrics, or skills the candidate didn't mention. Rewrite what they have.
 - bulletGlowUp.variants must contain exactly 3 alternatives per original bullet.
-- memeCaptions must contain exactly 3 entries (one per meme slot).
+- memeCaptions must contain exactly 3 entries for the likely result level based on your scores.
+- Caption slot 1 must fit the first template listed for that level, slot 2 the second template, slot 3 the third template.
+- Captions should be specific to the JD/resume gap but must not expose private resume details.
+- Keep meme caption lines short: max 70 characters per top/bottom line.
 - Return JSON only.`;
 }
 
@@ -136,5 +144,71 @@ export async function analyzeResume(
   } catch (err) {
     console.error("[geminiApi] falling back to mock:", err);
     return { analysis: mockAnalysis(), usedFallback: true };
+  }
+}
+
+export async function generateRizzLetter(
+  req: RoastRequest,
+): Promise<{ letter: string; usedFallback: boolean }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+
+  if (process.env.USE_MOCKS === "1" || !apiKey) {
+    return {
+      letter:
+        "Dear Hiring Team,\n\nI am excited to apply for this role because my background aligns with the hands-on web development work described in the posting. My projects show practical experience building user-facing features, collaborating across requirements, and improving my work through feedback.\n\nI would bring a fast-learning, product-minded approach to the team and would welcome the chance to discuss how my experience maps to your current needs.\n\nSincerely,\nYour Candidate",
+      usedFallback: true,
+    };
+  }
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const body = {
+      systemInstruction: {
+        role: "system",
+        parts: [
+          {
+            text: `You write concise, professional cover letters for junior candidates.
+${toneInstruction(req.tone)}
+
+Return ONLY the letter text. Do not invent company names, metrics, or experience.`,
+          },
+        ],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `JOB TITLE:\n${req.jobTitle}\n\nJOB DESCRIPTION:\n${req.jobDescription}\n\nRESUME:\n${req.resume}`,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.65,
+      },
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+
+    const data = await res.json();
+    const text: string | undefined =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("Gemini returned no letter");
+
+    return { letter: text.trim(), usedFallback: false };
+  } catch (err) {
+    console.error("[geminiApi] rizz letter fallback:", err);
+    return {
+      letter:
+        "Dear Hiring Team,\n\nI am excited to apply for this role. My background includes relevant project work, technical learning, and a strong interest in building useful products with a collaborative team.\n\nI would appreciate the opportunity to discuss how my experience and growth mindset can support your team.\n\nSincerely,\nYour Candidate",
+      usedFallback: true,
+    };
   }
 }

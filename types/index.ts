@@ -24,6 +24,7 @@ export type BulletGlowUpItem = {
 
 export type Meme = {
   templateId: string;
+  templateName?: string;
   imageUrl: string;
   topText: string;
   bottomText: string;

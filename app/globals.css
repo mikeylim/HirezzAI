@@ -40,3 +40,18 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@keyframes meme-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

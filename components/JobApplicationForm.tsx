@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { sampleInputs } from "@/data/sampleInputs";
+import { cn } from "@/lib/utils";
 import type { Tone } from "@/types";
 
 export type JobApplicationFormValues = {
@@ -26,7 +27,7 @@ export function JobApplicationForm({
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [resume, setResume] = useState("");
-  const [tone] = useState<Tone>("balanced");
+  const [tone, setTone] = useState<Tone>("balanced");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +41,23 @@ export function JobApplicationForm({
     setResume(sampleInputs.resume);
   };
 
+  const readResumeFile = async (file: File) => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension !== "txt") {
+      setResume(
+        "Paste the resume text here. Browser-side PDF/DOCX extraction is not enabled in this MVP yet.",
+      );
+      return;
+    }
+    setResume(await file.text());
+  };
+
   const disabled = isLoading || !jobTitle.trim() || !jobDescription.trim() || !resume.trim();
+  const toneOptions: Array<{ value: Tone; label: string; note: string }> = [
+    { value: "savage", label: "Brainrot Mode", note: "Maximum roast" },
+    { value: "balanced", label: "Balanced", note: "Useful and funny" },
+    { value: "gentle", label: "Be Gentle", note: "Softer feedback" },
+  ];
 
   return (
     <Card>
@@ -85,6 +102,41 @@ export function JobApplicationForm({
               onChange={(e) => setResume(e.target.value)}
               disabled={isLoading}
             />
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Input
+                id="resumeFile"
+                type="file"
+                accept=".txt"
+                className="max-w-xs"
+                disabled={isLoading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void readResumeFile(file);
+                }}
+              />
+              <span>.txt upload fills the resume box.</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Roast style</Label>
+            <div className="grid gap-2 md:grid-cols-3">
+              {toneOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setTone(option.value)}
+                  className={cn(
+                    "rounded-md border border-border px-3 py-2 text-left transition-colors hover:bg-muted disabled:opacity-50",
+                    tone === option.value && "border-primary bg-primary/10",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="text-xs text-muted-foreground">{option.note}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
