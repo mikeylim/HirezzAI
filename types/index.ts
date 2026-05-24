@@ -44,6 +44,7 @@ export type GeminiAnalysis = {
   quantifiedBulletCount: { before: number; after: number };
   readyToApply: boolean;
   memeCaptions: Array<{ top: string; bottom: string }>;
+  emojiBurst: string[];
 };
 
 export type RoastRequest = {
@@ -69,6 +70,7 @@ export type RoastResult = {
   quantifiedBulletCount: { before: number; after: number };
   readyToApply: boolean;
   memes: Meme[];
+  emojiBurst: string[];
   rizzLetter?: string;
   usedFallbacks: {
     gemini: boolean;

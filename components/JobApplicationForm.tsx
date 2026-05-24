@@ -28,10 +28,13 @@ export function JobApplicationForm({
   const [jobDescription, setJobDescription] = useState("");
   const [resume, setResume] = useState("");
   const [tone, setTone] = useState<Tone>("balanced");
+  const [fileStatus, setFileStatus] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobTitle.trim() || !jobDescription.trim() || !resume.trim()) return;
+    if (!resume.trim()) return;
     onSubmit({ jobTitle, jobDescription, resume, tone });
   };
 
@@ -42,17 +45,40 @@ export function JobApplicationForm({
   };
 
   const readResumeFile = async (file: File) => {
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    if (extension !== "txt") {
-      setResume(
-        "Paste the resume text here. Browser-side PDF/DOCX extraction is not enabled in this MVP yet.",
+    setIsExtracting(true);
+    setFileError(null);
+    setFileStatus(`Extracting text from ${file.name}...`);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody?.error || `Upload failed (${res.status})`);
+      }
+
+      const data: { text: string; format: "txt" | "docx" | "pdf" } =
+        await res.json();
+      setResume(data.text);
+      setFileStatus(`Loaded ${data.format.toUpperCase()} resume text.`);
+    } catch (err) {
+      setFileError(
+        err instanceof Error ? err.message : "Could not read that resume file.",
       );
-      return;
+      setFileStatus(null);
+    } finally {
+      setIsExtracting(false);
     }
-    setResume(await file.text());
   };
 
-  const disabled = isLoading || !jobTitle.trim() || !jobDescription.trim() || !resume.trim();
+  const disabled =
+    isLoading ||
+    isExtracting ||
+    !resume.trim();
   const toneOptions: Array<{ value: Tone; label: string; note: string }> = [
     { value: "savage", label: "Brainrot Mode", note: "Maximum roast" },
     { value: "balanced", label: "Balanced", note: "Useful and funny" },
@@ -70,7 +96,7 @@ export function JobApplicationForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="jobTitle">Job title</Label>
+            <Label htmlFor="jobTitle">Job title optional</Label>
             <Input
               id="jobTitle"
               placeholder="e.g. Junior Frontend Engineer"
@@ -81,7 +107,7 @@ export function JobApplicationForm({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="jobDescription">Job description</Label>
+            <Label htmlFor="jobDescription">Job description optional</Label>
             <Textarea
               id="jobDescription"
               placeholder="Paste the full JD here…"
@@ -106,16 +132,25 @@ export function JobApplicationForm({
               <Input
                 id="resumeFile"
                 type="file"
-                accept=".txt"
+                accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="max-w-xs"
-                disabled={isLoading}
+                disabled={isLoading || isExtracting}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void readResumeFile(file);
                 }}
               />
-              <span>.txt upload fills the resume box.</span>
+              <span>.txt, .docx, or .pdf upload fills the resume box.</span>
             </div>
+            {isExtracting && (
+              <p className="text-xs font-medium text-muted-foreground">
+                {fileStatus ?? "Extracting resume text..."}
+              </p>
+            )}
+            {!isExtracting && fileStatus && (
+              <p className="text-xs font-medium text-emerald-700">{fileStatus}</p>
+            )}
+            {fileError && <p className="text-xs font-medium text-destructive">{fileError}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -141,7 +176,7 @@ export function JobApplicationForm({
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button type="submit" disabled={disabled} size="lg">
-              {isLoading ? "Cooking…" : "Cook my resume"}
+              {isLoading ? "Cooking…" : isExtracting ? "Reading file…" : "Cook my resume"}
             </Button>
             <Button
               type="button"

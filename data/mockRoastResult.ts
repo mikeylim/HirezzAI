@@ -67,6 +67,7 @@ export const mockRoastResult: RoastResult = {
     "Computer Science student with hands-on experience building full-stack web apps in TypeScript and React. Shipped 3 production features used by 500+ users, with a focus on testable, maintainable code and clear collaboration with designers and backend engineers.",
   quantifiedBulletCount: { before: 0, after: 6 },
   readyToApply: false,
+  emojiBurst: ["💀", "🔥", "😭", "🤨", "⚠️", "🧯", "📉", "🫠", "🚨", "🛠️", "🤡", "📌"],
   memes: [
     {
       templateId: "112126428",
@@ -76,7 +77,7 @@ export const mockRoastResult: RoastResult = {
       bottomText: "JD SAYS 'SHIP TYPESCRIPT'",
     },
     {
-      templateId: "61544",
+      templateId: "55311130",
       templateName: "This Is Fine",
       imageUrl: "https://i.imgflip.com/wxica.jpg",
       topText: "NO METRICS IN MY BULLETS",
@@ -88,6 +89,20 @@ export const mockRoastResult: RoastResult = {
       imageUrl: "https://i.imgflip.com/30b1gx.jpg",
       topText: "PASTE GENERIC SUMMARY",
       bottomText: "PASTE GLOW UP PLAN",
+    },
+    {
+      templateId: "87743020",
+      templateName: "Two Buttons",
+      imageUrl: "https://i.imgflip.com/1g8my4.jpg",
+      topText: "ADD REAL METRICS",
+      bottomText: "KEEP VIBES ONLY",
+    },
+    {
+      templateId: "129242436",
+      templateName: "Change My Mind",
+      imageUrl: "https://i.imgflip.com/24y43o.jpg",
+      topText: "GENERIC RESUMES GET GHOSTED",
+      bottomText: "CHANGE MY MIND",
     },
   ],
   usedFallbacks: { gemini: true, brainrot: true, imgflip: true },

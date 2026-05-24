@@ -43,16 +43,22 @@ type GeminiAnalysis = {
   improvedSummary: string;
   quantifiedBulletCount: { before: number; after: number };
   readyToApply: boolean;          // true only if rizzScore >= 75
-  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 3, gen-z voice, ALL CAPS
+  memeCaptions: Array<{ top: string; bottom: string }>; // exactly 5, gen-z voice, ALL CAPS
+  emojiBurst: string[];           // exactly 12 emojis chosen for the rizzScore/result vibe
 };
 
 Rules:
+- If JOB TITLE or JOB DESCRIPTION is blank, perform a general resume review instead of job-specific matching.
+- When no job description is provided, base keywordMatch and titleAlignment on general role clarity, set missingDrip to broadly useful role/industry keywords that are genuinely suggested by the resume, and explain that job-specific match requires a JD.
 - Never fabricate jobs, metrics, or skills the candidate didn't mention. Rewrite what they have.
+- glowUpPlan advice must be concise and parallel: start each item with an action verb, keep it under 14 words, and make it feel like a quest/objective.
 - bulletGlowUp.variants must contain exactly 3 alternatives per original bullet.
-- memeCaptions must contain exactly 3 entries.
+- memeCaptions must contain exactly 5 entries.
 - Captions should clearly reference the main gap pattern: missing keywords, no metrics, generic summary, vague bullets, strong fit, or ready-to-apply energy.
 - Captions should be specific to the JD/resume gap but must not expose private resume details.
 - Keep meme caption lines short: max 70 characters per top/bottom line.
+- emojiBurst must contain exactly 12 emoji characters/short emoji sequences.
+- Choose emojiBurst based on rizzScore: cooked scores use panic/fire/clown/skull energy, mid scores use confused/side-eye/repair energy, strong scores use trophy/rocket/sparkle/check energy.
 - Return JSON only.`;
 }
 
@@ -61,7 +67,7 @@ function buildUserPrompt({
   jobDescription,
   resume,
 }: RoastRequest): string {
-  return `JOB TITLE:\n${jobTitle}\n\nJOB DESCRIPTION:\n${jobDescription}\n\nRESUME:\n${resume}`;
+  return `JOB TITLE:\n${jobTitle || "Not provided"}\n\nJOB DESCRIPTION:\n${jobDescription || "Not provided"}\n\nRESUME:\n${resume}`;
 }
 
 function mockAnalysis(): GeminiAnalysis {
@@ -82,6 +88,7 @@ function mockAnalysis(): GeminiAnalysis {
       top: m.topText,
       bottom: m.bottomText,
     })),
+    emojiBurst: mockRoastResult.emojiBurst,
   };
 }
 
@@ -96,7 +103,8 @@ function isValidAnalysis(x: unknown): x is GeminiAnalysis {
     typeof a.recruiterPOV === "string" &&
     Array.isArray(a.glowUpPlan) &&
     Array.isArray(a.bulletGlowUp) &&
-    Array.isArray(a.memeCaptions)
+    Array.isArray(a.memeCaptions) &&
+    Array.isArray(a.emojiBurst)
   );
 }
 
@@ -179,7 +187,7 @@ Return ONLY the letter text. Do not invent company names, metrics, or experience
           role: "user",
           parts: [
             {
-              text: `JOB TITLE:\n${req.jobTitle}\n\nJOB DESCRIPTION:\n${req.jobDescription}\n\nRESUME:\n${req.resume}`,
+              text: `JOB TITLE:\n${req.jobTitle || "Not provided"}\n\nJOB DESCRIPTION:\n${req.jobDescription || "Not provided"}\n\nRESUME:\n${req.resume}`,
             },
           ],
         },

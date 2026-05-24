@@ -207,7 +207,7 @@ function scoreTemplate(template: MemeTemplate, level: CookedLevel, tokens: Set<s
 export function selectMemeTemplates({
   level,
   signalText,
-  count = 3,
+  count = 5,
 }: {
   level: CookedLevel;
   signalText: string;
