@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RoastResult } from "@/types";
 
 /* ─── Geometry constants ─────────────────────────────── */
 const SVG_W         = 130;
@@ -67,17 +68,22 @@ function ChefSVG() {
 /* ─── Chat types ─────────────────────────────────────── */
 type Message = { role: "user" | "chef"; text: string };
 
-const INITIAL_MESSAGES: Message[] = [
-  { role: "chef", text: "Yo! I'm Chef Recruiter 🍳 Ask me anything about your resume or job hunt." },
-];
+function getInitialMessages(hasResult: boolean): Message[] {
+  return [{
+    role: "chef",
+    text: hasResult
+      ? "Yo! I'm Chef Recruiter 🍳 I just finished cooking your resume — ask me anything about your results or how to level up!"
+      : "Yo! I'm Chef Recruiter 🍳 Ask me anything about resumes or job hunting. Submit your resume above for a full roast first!",
+  }];
+}
 
 /* ─── Main component ─────────────────────────────────── */
-export function ChefCharacter() {
+export function ChefCharacter({ roastContext }: { roastContext?: RoastResult | null }) {
   const [xform,      setXform]      = useState("translate(-9999px,-9999px)");
   const [opacity,    setOpacity]    = useState(0);
   const [inCorner,   setInCorner]   = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [messages,   setMessages]   = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages,   setMessages]   = useState<Message[]>(() => getInitialMessages(!!roastContext));
   const [input,      setInput]      = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -141,6 +147,11 @@ export function ChefCharacter() {
     if (!inCorner) setIsChatOpen(false);
   }, [inCorner]);
 
+  // Reset greeting when a new roast result comes in
+  useEffect(() => {
+    setMessages(getInitialMessages(!!roastContext));
+  }, [roastContext]);
+
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || chatLoading) return;
@@ -152,7 +163,7 @@ export function ChefCharacter() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: next }),
+        body: JSON.stringify({ message: text, history: next, roastContext: roastContext ?? null }),
       });
       const data = await res.json() as { reply: string };
       setMessages(prev => [...prev, { role: "chef", text: data.reply }]);

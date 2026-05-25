@@ -38,7 +38,10 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 function shareText(result: RoastResult): string {
-  return `HirezzAI report: ${result.rizzScore}/100 Rizz Score, ${result.auraScore}/100 Aura Score. Verdict: ${result.level.toUpperCase()}. Missing drip: ${result.missingDrip.slice(0, 5).join(", ") || "none"}.`;
+  const verdict =
+    result.level === "cooked" ? "💀 COOKED" :
+    result.level === "locked-in" ? "🔒 LOCKED IN" : "🤔 MID";
+  return `Just got my resume roasted by HirezzAI 🔥\nRizz Score: ${result.rizzScore}/100 | Aura: ${result.auraScore}/100\nVerdict: ${verdict}\n${result.readyToApply ? "✅ Ready to apply fr" : "💀 Back to the drawing board"}\nhirezz-ai.vercel.app`;
 }
 
 function verdictTitle(level: RoastResult["level"]): string {
@@ -135,7 +138,10 @@ export function RoastResultCard({
   const [showMemeDrop, setShowMemeDrop] = useState(Boolean(result.memes.length));
   const [isBrainrotSpeaking, setIsBrainrotSpeaking] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const brainrotAudioRef = useRef<HTMLAudioElement | null>(null);
+  const shareDropdownRef = useRef<HTMLDivElement>(null);
   const usingAnyFallback =
     result.usedFallbacks.gemini ||
     result.usedFallbacks.brainrot ||
@@ -144,10 +150,6 @@ export function RoastResultCard({
   const activeMeme = result.memes[activeMemeIndex] ?? result.memes[0];
   const auraMeme = result.memes[auraMemeIndex] ?? activeMeme;
   const reportText = polishedResumeText(result);
-  const shareCopy = shareText(result);
-  const shareUrl =
-    typeof window !== "undefined" ? window.location.href : "https://hirezzai.vercel.app";
-  const encodedShare = encodeURIComponent(`${shareCopy}\n${shareUrl}`);
   const topFix =
     result.glowUpPlan.find((item) => item.priority === "high") ??
     result.glowUpPlan[0];
@@ -157,6 +159,26 @@ export function RoastResultCard({
     setAuraMemeIndex(0);
     setShowMemeDrop(Boolean(result.memes.length));
   }, [result]);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxIndex(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lightboxIndex]);
+
+  useEffect(() => {
+    if (!shareOpen) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (shareDropdownRef.current && !shareDropdownRef.current.contains(e.target as Node)) {
+        setShareOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => document.removeEventListener("mousedown", onOutsideClick);
+  }, [shareOpen]);
 
   useEffect(() => {
     if (showMemeDrop && activeMeme) {
@@ -178,6 +200,20 @@ export function RoastResultCard({
     await navigator.clipboard.writeText(text);
     setCopiedKey(key);
     window.setTimeout(() => setCopiedKey(null), 1400);
+  };
+
+  const handleSocialShare = async (platform: "instagram" | "tiktok") => {
+    setShareOpen(false);
+    const text = shareText(result);
+    const url = "https://hirezz-ai.vercel.app";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "HirezzAI Aura Card", text, url });
+        return;
+      } catch { /* user cancelled */ }
+    }
+    // Desktop fallback: copy the share text
+    await copy(`share-${platform}`, `${text}\n${url}`);
   };
 
   const downloadTxt = () => {
@@ -356,7 +392,7 @@ export function RoastResultCard({
           <section className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-white/20 bg-background shadow-[0_32px_120px_rgba(0,0,0,0.62),0_0_90px_rgba(249,115,22,0.48)] animate-[meme-boom_560ms_cubic-bezier(.16,1.32,.28,1)_both]">
             <div className="absolute inset-0 pointer-events-none opacity-20 [background-image:linear-gradient(110deg,transparent_0%,rgba(255,255,255,.95)_48%,transparent_56%)] animate-[shine-sweep_1.15s_ease-out_160ms_both]" />
 
-            <div className="relative bg-foreground px-4 py-4 text-center text-background md:px-6">
+            <div className="relative bg-foreground px-4 py-4 text-center text-background md:px-4">
               <h3 className="text-3xl font-black leading-none md:text-5xl">
                 {verdictTitle(result.level)}
               </h3>
@@ -446,6 +482,7 @@ export function RoastResultCard({
                       onClick={() => {
                         setActiveMemeIndex(i);
                         setAuraMemeIndex(i);
+                        setLightboxIndex(i);
                       }}
                       className={`group w-[260px] flex-none overflow-hidden rounded-lg border bg-background text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg md:w-[320px] ${
                         i === activeMemeIndex
@@ -466,7 +503,17 @@ export function RoastResultCard({
                       </div>
                       <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold">
                         <span>Meme {i + 1}</span>
-                        <span className="text-muted-foreground">caption baked in</span>
+                        <a
+                          href={meme.imageUrl}
+                          download={`hirezzai-meme-${i + 1}.jpg`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download
+                        </a>
                       </div>
                     </button>
                   ))}
@@ -545,19 +592,55 @@ export function RoastResultCard({
                     Pick the meme that matches your application aura.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copy("share", shareText(result))}
-                >
-                  {copiedKey === "share" ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
+                <div className="relative" ref={shareDropdownRef}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShareOpen(o => !o)}
+                  >
                     <Share2 className="h-4 w-4" />
+                    Share
+                  </Button>
+                  {shareOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                      <a
+                        href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://hirezz-ai.vercel.app")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setShareOpen(false)}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-muted"
+                      >
+                        <span>🔗</span> LinkedIn
+                      </a>
+                      <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText(result))}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setShareOpen(false)}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-muted"
+                      >
+                        <span>𝕏</span> X / Twitter
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => void handleSocialShare("instagram")}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-muted"
+                      >
+                        {(copiedKey === "share-instagram") ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <span>📷</span>}
+                        {copiedKey === "share-instagram" ? "Copied!" : "Instagram"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSocialShare("tiktok")}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-muted"
+                      >
+                        {(copiedKey === "share-tiktok") ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <span>🎵</span>}
+                        {copiedKey === "share-tiktok" ? "Copied!" : "TikTok"}
+                      </button>
+                    </div>
                   )}
-                  Share
-                </Button>
+                </div>
               </div>
               <div className="overflow-hidden rounded-lg border border-primary/30 bg-background">
                 {auraMeme && (
@@ -576,12 +659,12 @@ export function RoastResultCard({
                 <p className="text-xs font-semibold uppercase text-muted-foreground">
                   Application Aura
                 </p>
-                <div className="mt-2 flex items-end justify-between gap-4">
+                <div className="mt-2 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-5xl font-black">{result.auraScore}</p>
                     <p className="text-xs text-muted-foreground">Aura Score</p>
                   </div>
-                  <Badge className="bg-primary text-primary-foreground">
+                  <Badge className="bg-primary text-primary-foreground align-top">
                     {verdictTitle(result.level)}
                   </Badge>
                 </div>
@@ -615,40 +698,6 @@ export function RoastResultCard({
                       />
                     </button>
                   ))}
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs font-semibold md:grid-cols-4">
-                  <a
-                    className="rounded-md border border-border px-2 py-2 hover:bg-muted"
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    LinkedIn
-                  </a>
-                  <a
-                    className="rounded-md border border-border px-2 py-2 hover:bg-muted"
-                    href="https://www.instagram.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Instagram
-                  </a>
-                  <a
-                    className="rounded-md border border-border px-2 py-2 hover:bg-muted"
-                    href="https://www.tiktok.com/upload"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    TikTok
-                  </a>
-                  <a
-                    className="rounded-md border border-border px-2 py-2 hover:bg-muted"
-                    href={`https://twitter.com/intent/tweet?text=${encodedShare}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    X/Twitter
-                  </a>
                 </div>
                 </div>
               </div>
@@ -891,6 +940,33 @@ export function RoastResultCard({
           )}
         </CardContent>
       </Card>
+
+      {lightboxIndex !== null && result.memes[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-[90vw]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={result.memes[lightboxIndex].imageUrl}
+              alt={`Meme ${lightboxIndex + 1}`}
+              className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+            />
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(null)}
+              aria-label="Close"
+              className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-foreground shadow-lg hover:bg-muted"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {usingAnyFallback && (
         <p className="text-xs text-muted-foreground">

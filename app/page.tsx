@@ -7,6 +7,7 @@ import { JobApplicationForm, type JobApplicationFormValues } from "@/components/
 import { RoastResultCard } from "@/components/RoastResultCard";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
+import { ChefCharacter } from "@/components/ChefCharacter";
 import type { RoastResult } from "@/types";
 
 /* ─── Marquee ticker ─────────────────────────────────── */
@@ -84,6 +85,7 @@ export default function HomePage() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden">
+      <ChefCharacter roastContext={result} />
 
       {/* ── Ambient glow orbs ── */}
       <div aria-hidden className="pointer-events-none fixed left-[-18%] top-[-8%] h-[520px] w-[520px] animate-pulse-glow rounded-full blur-[130px]"
