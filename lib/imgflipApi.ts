@@ -2,8 +2,8 @@ import "server-only";
 import type { CookedLevel, Meme } from "@/types";
 import { selectMemeTemplates } from "./selectMemeTemplate";
 
-function cleanCaption(text: string): string {
-  return text
+function cleanCaption(text: string | undefined | null): string {
+  return (text ?? "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 90)
@@ -23,10 +23,13 @@ export async function makeMemeCarousel({
   const username = process.env.IMGFLIP_USERNAME;
   const password = process.env.IMGFLIP_PASSWORD;
 
-  const paired = templates.map((tpl, i) => ({
-    template: tpl,
-    caption: captions[i] ?? captions[0] ?? { top: "", bottom: "" },
-  }));
+  const paired = templates.map((tpl, i) => {
+    const raw = captions[i] ?? captions[0] ?? {};
+    return {
+      template: tpl,
+      caption: { top: raw.top ?? "", bottom: raw.bottom ?? "" },
+    };
+  });
 
   if (process.env.USE_MOCKS === "1" || !username || !password) {
     return {
