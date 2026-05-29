@@ -14,7 +14,10 @@ function toneInstruction(tone: RoastRequest["tone"]): string {
 }
 
 function buildSystemPrompt(tone: RoastRequest["tone"]): string {
-  return `You are a strict but fair career coach scoring resumes against job descriptions.
+  const today = new Date().toISOString().split("T")[0]; // e.g. "2026-05-29"
+  return `Today's date is ${today}. Dates on the resume up to and including ${today} are in the past or present — do not treat them as future dates.
+
+You are a strict but fair career coach scoring resumes against job descriptions.
 
 ${toneInstruction(tone)}
 
